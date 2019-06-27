@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="">
+	<meta name="author" content="">
+
+	<title>Login</title>
+	<!-- Bootstrap Core CSS -->
+	<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
+	<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" />
+	<link href='https://fonts.googleapis.com/css?family=Ubuntu+Mono' rel='stylesheet' type='text/css'>
+	<style>
+		.margin-top-80 {
+			margin-top: 80px;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="wrapper">
+		<header class="navbar navbar-default navbar-fixed-top">
+			<div class="container">
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+						data-target="#main-navbar">
+						<span class="sr-only">Toggle navigation</span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<a class="navbar-brand" href="#">Node.js AzureAD</a>
+				</div>
+				<div class="collapse navbar-collapse" id="main-navbar">
+					<ul class="nav navbar-nav navbar-right">
+						<li><a href="//twitter.com/" target="_blank"><i class="fa fa-twitter fa-fw fa-2x"></i></a></li>
+						<li><a href="//plus.google.com/" scargarcia-ozkary" target="_blank"><i
+									class="fa fa-google-plus fa-fw fa-2x"></i></a></li>
+					</ul>
+				</div>
+			</div>
+		</header>
+		<section class="container margin-top-80">
+			<div class="panel panel-default margin-top-40">
+				<div class="panel-heading">
+					<i class="fa fa-user fa-fw fa-2x"></i> <span>My Profile</span>
+				</div>
+				<!-- /.panel-heading -->
+				<div class="panel-body text-center">
+
+					<% if (!user) { %>
+					<div id="unsecured">
+						<h1>Secured Content</h1>
+						<i class="fa fa-lock fa-5x"></i><br>
+						<div class="lead">
+							Please login
+						</div>
+							<!--- 
+							<a href="/login" title="Press to login"><img src="https://docs.microsoft.com/en-us/azure/active-directory/develop/media/howto-add-branding-in-azure-ad-apps/ms-symbollockup_signin_dark.svg" alt="Login"></a>
+							--->
+							<a href="/login" title="Press to login"><img src="/img/logo.png" width="280" alt="Login"></a>
+					</div>
+					<% } else { %>
+					<div id="secured">
+						<h1>Welcome: <%= user.displayName %></h1>
+						<i ng-if="!ctrl.user" class="fa fa-unlock fa-5x"></i><br>
+						<div class="lead">
+
+							<div class="">
+								<h2>My Profile</h2>
+								<!-- <a href="/account">Account Info</a></br> -->
+								<ul class="list-group text-left">
+									<li class="list-group-item"><b>Email: </b><%= user._json.preferred_username %></li>
+									<li class="list-group-item"><b>Name: </b><%= user.displayName %></li>
+								</ul>
+								<a type="button" href="/logout" title="Press to logout" class=" btn btn-primary">Logout</a>
+							</div>
+						</div>
+					</div>
+					<% } %>
+				</div>
+				<!-- /.panel-body -->
+			</div>
+			<!-- /.panel -->
+		</section>
+	</div>
+	<!-- /#wrapper -->
+	<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js" crossorigin="anonymous"></script>
+	<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</body>
