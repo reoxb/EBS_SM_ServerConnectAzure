@@ -26,6 +26,10 @@ var log = bunyan.createLogger({
     name: 'Microsoft OIDC Example Web Application'
 });
 
+//variables del servidor
+const port = process.env.PORT || 3000;
+const hostname = 'localhost';
+
 /******************************************************************************
  * Set up passport in the app 
  ******************************************************************************/
@@ -153,7 +157,7 @@ app.use(bodyParser.urlencoded({ extended : true }));
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(app.router);
-app.use(express.static(__dirname + 'public', { index: 'login.html' }));
+app.use(express.static(__dirname + '/public'));
 
 //-----------------------------------------------------------------------------
 // Set up the route controller
@@ -172,15 +176,18 @@ function ensureAuthenticated(req, res, next) {
 };
 
 app.get('/', function(req, res) {
-  console.log("#############################################")
   console.log(req.user)
   // res.render('index', { user: req.user });
-  res.redirect('index.html');
+  if (req.user) {
+    res.redirect('index.html');
+  } else {
+    res.redirect('login.html');
+  }
 });
 
 // '/account' is only available to logged in user
 app.get('/account', ensureAuthenticated, function(req, res) {
-  res.render('account', { user: req.user });
+  // res.render('account', { user: req.user });
 });
 
 app.get('/login_azure',
@@ -243,5 +250,28 @@ app.get('/logout', function(req, res){
   });
 });
 
-app.listen(3000);
+app.post('/action_page', (req, res) => {
+  const users = [
+    {email: 'l.quezada@cimmyt.org', password: '12345'},
+    {email: 'l.puebla@cimmyt.org', password: '12345' },
+    {email: 'j.s.sosa@cimmyt.org', password: '12345'},
+    {email: 'admin', password: 'admin'}
+  ];
+
+  const isLoggin = users.filter((user)=> JSON.stringify(user) === JSON.stringify(req.body)); 
+
+  if(isLoggin.length){
+    const email = req.body.email;
+    const password = req.body.password;
+    console.log(`Wellcome: your email address: ${email} and your password: ${password}`);
+    res.redirect('index.html');
+    // res.redirect('index.html' + '/' + req.body.user_name);
+  } else {
+    res.redirect('login.html');
+  }
+});
+
+app.listen(port, hostname, () =>
+  console.log(`File server running at http://${hostname}:${port}/`)
+);
 
