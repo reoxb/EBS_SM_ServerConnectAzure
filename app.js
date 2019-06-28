@@ -4,13 +4,17 @@
  * Module dependencies.
  *****************************************************************************/
 
+require('dotenv').config();
+var path = require('path');
 var express = require('express');
 var cookieParser = require('cookie-parser');
 var expressSession = require('express-session');
 var bodyParser = require('body-parser');
+var util = require('util');
+var logger = require('morgan');
+var querystring = require('querystring');
 var methodOverride = require('method-override');
 var passport = require('passport');
-var util = require('util');
 var bunyan = require('bunyan');
 var config = require('./config');
 
@@ -21,6 +25,7 @@ var mongoose = require('mongoose');
 // Start QuickStart here
 
 var OIDCStrategy = require('passport-azure-ad').OIDCStrategy;
+var Auth0Strategy = require('passport-auth0');
 
 var log = bunyan.createLogger({
     name: 'Microsoft OIDC Example Web Application'
@@ -82,13 +87,13 @@ var findByOid = function(oid, fn) {
 // To do prototype (6), passReqToCallback must be set to true in the config.
 //-----------------------------------------------------------------------------
 passport.use(new OIDCStrategy({
-    identityMetadata: config.creds.identityMetadata,
-    clientID: config.creds.clientID,
+    identityMetadata: process.env.AZUREAD_IDENTITYMETADATA,
+    clientID: process.env.AZUREAD_CLIENT_ID,
     responseType: config.creds.responseType,
     responseMode: config.creds.responseMode,
-    redirectUrl: config.creds.redirectUrl,
+    redirectUrl: process.env.AZUREAD_REDIRECTURL,
     allowHttpForRedirectUrl: config.creds.allowHttpForRedirectUrl,
-    clientSecret: config.creds.clientSecret,
+    clientSecret: process.env.AZUREAD_CLIENT_SECRET,
     validateIssuer: config.creds.validateIssuer,
     isB2C: config.creds.isB2C,
     issuer: config.creds.issuer,
@@ -122,17 +127,31 @@ passport.use(new OIDCStrategy({
   }
 ));
 
+// Configure Passport to use Auth0
+passport.use(new Auth0Strategy(
+    {
+      domain: process.env.AUTH0_DOMAIN,
+      clientID: process.env.AUTH0_CLIENT_ID,
+      clientSecret: process.env.AUTH0_CLIENT_SECRET,
+      callbackURL: process.env.AUTH0_CALLBACK_URL || 'http://localhost:3000/callback'
+    },
+    function (accessToken, refreshToken, extraParams, profile, done) {
+      // accessToken is the token to call Auth0 API (not needed in the most cases)
+      // extraParams.id_token has the JSON Web Token
+      // profile has all the information from the user
+      return done(null, profile);
+    }
+  )
+)
 
 //-----------------------------------------------------------------------------
 // Config the app, include middlewares
 //-----------------------------------------------------------------------------
 var app = express();
 
-// app.set('views', __dirname + '/views');
-// app.set('view engine', 'ejs');
-
 app.use(express.logger());
 app.use(methodOverride());
+app.use(logger('dev'));
 app.use(cookieParser());
 
 // set up session middleware
@@ -157,7 +176,7 @@ app.use(bodyParser.urlencoded({ extended : true }));
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(app.router);
-app.use(express.static(__dirname + '/public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 //-----------------------------------------------------------------------------
 // Set up the route controller
@@ -270,6 +289,80 @@ app.post('/action_page', (req, res) => {
     res.redirect('login.html');
   }
 });
+
+// Perform the login, after login Auth0 will redirect to callback
+app.get('/login_auth0',
+  passport.authenticate('auth0', {scope: 'openid email profile'}), function (req, res) {
+  res.redirect('/');
+});
+
+// Perform the final stage of authentication and redirect to previously requested URL or '/user'
+app.get('/callback', function (req, res, next) {
+  passport.authenticate('auth0', function (err, user, info) {
+    if (err) { return next(err); }
+    if (!user) { return res.redirect('/login.html'); }
+    console.log(user);
+    res.redirect('/index.html');
+    // req.logIn(user, function (err) {
+    //   if (err) { return next(err); }
+    //   const returnTo = req.session.returnTo;
+    //   delete req.session.returnTo;
+    //   res.redirect(returnTo || '/index.html');
+    // });
+
+  })(req, res, next);
+});
+
+// app.get('/callback',
+//   passport.authenticate('auth0', { failureRedirect: '/login' }),
+//   function(req, res) {
+//     if (!req.user) {
+//       throw new Error('user null');
+//     }
+//     // res.redirect("/");
+//     res.send("");
+//   }
+// );
+
+// Perform session logout and redirect to homepage
+app.get('/logout_auth0', (req, res) => {
+  req.logout();
+
+  var returnTo = req.protocol + '://' + req.hostname;
+  var port = req.connection.localPort;
+  if (port !== undefined && port !== 80 && port !== 443) {
+    returnTo += ':' + port;
+  }
+  var logoutURL = new URL(
+    util.format('https://%s/logout', process.env.AUTH0_DOMAIN)
+  );
+  var searchString = querystring.stringify({
+    client_id: process.env.AUTH0_CLIENT_ID,
+    returnTo: returnTo
+  });
+
+  console.log("Search String");
+  console.log(searchString);
+  logoutURL.search = searchString;
+  // res.redirect(logoutURL);
+  res.redirect('login.html');
+});
+
+// Perform session logout and redirect to homepage
+
+// Catch 404 and forward to error handler
+app.use(function (req, res, next) {
+  const err = new Error('Not Found');
+  err.status = 404;
+  next(err);
+});
+
+// Production error handler
+// No stacktraces leaked to user
+// app.use(function (err, req, res, next) {
+//   res.status(err.status || 500);
+//    res.send('Error 500');
+// });
 
 app.listen(port, hostname, () =>
   console.log(`File server running at http://${hostname}:${port}/`)
